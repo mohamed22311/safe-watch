@@ -1,0 +1,15 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+transformers>=4.44.0
+torch
+Pillow>=10.3.0
+opencv-python>=4.9.0.80
+numpy>=1.26.4
+librosa>=0.10.2.post1
+soundfile>=0.12.1
+pydantic>=2.7.0
+pydantic-settings>=2.4.0
+python-multipart>=0.0.9
+aiofiles>=23.2.1
+requests>=2.32.3
+

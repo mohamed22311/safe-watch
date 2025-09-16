@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  safewatch:
+    build: .
+    image: safewatch:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTO_RUN=false
+      - VIDEO_SOURCE=
+      - AUDIO_SOURCE=
+      - STORAGE_BASE_DIR=/app/storage
+      - EXTERNAL_BASE_URL=
+    volumes:
+      - ./storage:/app/storage
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
