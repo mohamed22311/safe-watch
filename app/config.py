@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     audio_fewshot_clips: Optional[str] = None    # e.g., "./ex1.wav,./ex2.wav"
 
     # Few-shot example definition files (JSON)
-    fewshot_vision_file: Optional[str] = None     # JSON list: {"image": path, "output": text}
-    fewshot_audio_file: Optional[str] = None      # JSON list: {"output": text}
+    fewshot_vision_file: Optional[str] = "/app/fewshot/vision_examples.json"
+    fewshot_audio_file: Optional[str] = "/app/fewshot/audio_examples.json"
 
     # Scheduling
     vision_interval_seconds: int = 10

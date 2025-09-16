@@ -11,6 +11,8 @@ COPY requirements.txt ./
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY fewshot ./fewshot
+COPY trash ./trash
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
