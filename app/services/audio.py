@@ -27,7 +27,8 @@ class AudioModel:
     def generate(self, conversation: list[dict], audio: np.ndarray) -> str:
         text = self.processor.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
         inputs = self.processor(text=text, audios=[audio], return_tensors="pt", padding=True)
-        generate_ids = self.model.generate(**inputs, max_length=2048)
+        # Use max_new_tokens to avoid issues when the input prompt exceeds default max_length
+        generate_ids = self.model.generate(**inputs, max_new_tokens=512)
         generate_ids = generate_ids[:, inputs.input_ids.size(1):]
         response = self.processor.batch_decode(
             generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False
