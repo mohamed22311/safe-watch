@@ -19,14 +19,21 @@ from ..prompts.audio import get_prompt, build_messages_and_paths
 class AudioModel:
     def __init__(self, model_name: str) -> None:
         self.model_name = model_name
-        self.processor = AutoProcessor.from_pretrained(model_name)
-        self.model = Qwen2AudioForConditionalGeneration.from_pretrained(model_name)
+        # Enable remote code to use the model-specific processor that supports audio inputs
+        self.processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+        self.model = Qwen2AudioForConditionalGeneration.from_pretrained(
+            model_name,
+            device_map="auto",
+            torch_dtype="auto",
+            trust_remote_code=True,
+        )
         self.model.eval()
 
     @torch.inference_mode()
     def generate(self, conversation: list[dict], audio: np.ndarray) -> str:
         text = self.processor.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
-        inputs = self.processor(text=text, audios=[audio], return_tensors="pt", padding=True)
+        # Pass a list for batched API consistency
+        inputs = self.processor(text=[text], audios=[audio], return_tensors="pt", padding=True)
         # Use max_new_tokens to avoid issues when the input prompt exceeds default max_length
         generate_ids = self.model.generate(**inputs, max_new_tokens=512)
         generate_ids = generate_ids[:, inputs.input_ids.size(1):]
