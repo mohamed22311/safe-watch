@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import json
 from pathlib import Path
 from ..config import settings
@@ -12,7 +12,7 @@ def base_instruction() -> str:
         "  1) A single valid JSON object (see schema below) only — on the first output channel — for automated systems to parse.\n"
         "  2) A short human-readable Summary section (2–6 sentences) that highlights urgent items and recommended actions.\n\n"
         "GENERAL RULES\n"
-        "- Detect and report the **primary spoken language(s)** of the audio file at the start of analysis. If multiple languages are used, list them in order of prominence with confidence.\n"
+        "- Detect and report the *primary spoken language(s)* of the audio file at the start of analysis. If multiple languages are used, list them in order of prominence with confidence.\n"
         "- Do NOT hallucinate. If uncertain, mark the detection with low confidence and explain the uncertainty in the \"notes\" field.\n"
         "- Use UTC-relative timestamps measured from audio start: \"HH:MM:SS.mmm\" (00:00:00.000 = start).\n"
         "- Millisecond precision required. For instantaneous/blip sounds set end == start.\n"
@@ -67,7 +67,7 @@ def base_instruction() -> str:
 
 
 def get_examples() -> List[Dict[str, Any]]:
-    # Prefer JSON file defining outputs
+    # Prefer JSON file defining example audio paths and outputs
     if settings.fewshot_audio_file:
         fp = Path(settings.fewshot_audio_file)
         if fp.exists():
@@ -75,8 +75,11 @@ def get_examples() -> List[Dict[str, Any]]:
                 data = json.loads(fp.read_text(encoding="utf-8"))
                 examples: List[Dict[str, Any]] = []
                 for item in data:
+                    audio_path = item.get("audio")
+                    if not audio_path:
+                        continue
                     examples.append({
-                        "prompt": item.get("prompt", base_instruction()),
+                        "audio": audio_path,
                         "output": item.get("output", "")
                     })
                 return examples
@@ -87,9 +90,9 @@ def get_examples() -> List[Dict[str, Any]]:
     paths: List[str] = []
     if settings.audio_fewshot_clips:
         paths = [p.strip() for p in settings.audio_fewshot_clips.split(",") if p.strip()]
-    for _ in paths:
+    for p in paths:
         examples.append({
-            "prompt": base_instruction(),
+            "audio": p,
             "output": (
                 '{"audio_metadata":{"duration_s":15.0,"sample_rate_hz":16000,"channels":1,"detected_languages":[],"notes":null},'
                 '"sounds_detected":[],"speech_detected":[],"emergencies":[],'
@@ -100,15 +103,20 @@ def get_examples() -> List[Dict[str, Any]]:
     return examples
 
 
-def build_messages(variant: str) -> list[dict]:
-    # System goes first (matches your original style)
+def build_messages_and_paths(variant: str) -> Tuple[list[dict], List[str]]:
+    # System goes first
     messages: list[dict] = [{"role": "system", "content": base_instruction()}]
+    example_audio_paths: List[str] = []
     # Default to few-shot unless explicitly "default"
     if variant != "default":
         for ex in get_examples():
-            messages.append({"role": "user", "content": [{"type": "text", "text": ex["prompt"]}]})
-            messages.append({"role": "assistant", "content": [{"type": "text", "text": ex["output"]}]})
-    return messages
+            audio_path = ex.get("audio")
+            if not audio_path:
+                continue
+            messages.append({"role": "user", "content": [{"type": "audio", "audio_url": audio_path}]})
+            messages.append({"role": "assistant", "content": [{"type": "text", "text": ex.get("output", "")}]} )
+            example_audio_paths.append(audio_path)
+    return messages, example_audio_paths
 
 
 def get_prompt(variant: str = "default") -> str:

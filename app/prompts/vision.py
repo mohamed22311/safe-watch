@@ -47,7 +47,7 @@ def get_examples() -> List[Dict[str, Any]]:
                 for item in data:
                     examples.append({
                         "image": item.get("image"),
-                        "prompt": item.get("prompt", base_instruction()),
+                        "prompt": base_instruction(),
                         "output": item.get("output", "")
                     })
                 return examples

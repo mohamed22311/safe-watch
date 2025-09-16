@@ -13,7 +13,7 @@ from transformers import Qwen2AudioForConditionalGeneration, AutoProcessor
 from ..config import settings
 from ..models.schemas import AudioResult, AudioAnalysis
 from ..utils.storage import get_storage
-from ..prompts.audio import get_prompt, build_messages
+from ..prompts.audio import get_prompt, build_messages_and_paths
 
 
 class AudioModel:
@@ -53,7 +53,7 @@ class AudioService:
             tmp.flush()
             y, sr = librosa.load(tmp.name, sr=get_audio_model().processor.feature_extractor.sampling_rate)
         model = get_audio_model()
-        conversation = build_messages(prompt_variant)
+        conversation, _ = build_messages_and_paths(prompt_variant)
         # Append the actual audio message placeholder expected by the template
         conversation.append({"role": "user", "content": [{"type": "audio", "audio_url": "local.wav"}]})
         text = model.generate(conversation=conversation, audio=y)
