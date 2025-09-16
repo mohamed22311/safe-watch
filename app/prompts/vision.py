@@ -45,10 +45,27 @@ def get_examples() -> List[Dict[str, Any]]:
                 data = json.loads(fp.read_text(encoding="utf-8"))
                 examples: List[Dict[str, Any]] = []
                 for item in data:
+                    # Normalize image path relative to the JSON file directory if needed
+                    raw_image = item.get("image")
+                    resolved_image: Optional[str] = None
+                    if isinstance(raw_image, str) and raw_image.strip():
+                        img_path = Path(raw_image)
+                        if not img_path.is_absolute():
+                            img_path = (fp.parent / img_path).resolve()
+                        resolved_image = str(img_path)
+
+                    # Join list-based outputs into a single string
+                    output_field: Any = item.get("output", "")
+                    if isinstance(output_field, list):
+                        try:
+                            output_field = "".join(output_field)
+                        except Exception:
+                            output_field = "\n".join(map(str, output_field))
+
                     examples.append({
-                        "image": item.get("image"),
+                        "image": resolved_image,
                         "prompt": base_instruction(),
-                        "output": item.get("output", "")
+                        "output": output_field,
                     })
                 return examples
             except Exception:

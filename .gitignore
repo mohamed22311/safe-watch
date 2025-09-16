@@ -1,2 +1,4 @@
 trash/
 venv_vlm/
+test*
+image*
