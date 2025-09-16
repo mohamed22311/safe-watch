@@ -1,7 +1,197 @@
 [
   {
-    "audio": "./path/to/example1.wav",
-    "output": "{\"audio_metadata\":{\"duration_s\":15.0,\"sample_rate_hz\":16000,\"channels\":1,\"detected_languages\":[{\"language\":\"en\",\"confidence\":0.98}],\"notes\":null},\"sounds_detected\":[{\"type\":\"sustained_scream\",\"start\":\"00:00:05.200\",\"end\":\"00:00:08.900\",\"confidence\":0.82}],\"speech_detected\":[],\"emergencies\":[{\"kind\":\"assault_noise\",\"severity\":4,\"rationale\":\"prolonged screaming consistent with distress\",\"confidence\":0.78}],\"summary\":\"Sustained distress scream detected.\",\"recommendations\":[\"Review video around 00:00:05\"],\"warnings\":[]}\n\nSustained human scream between 5.2s and 8.9s. Recommend checking cameras and dispatching on-site staff."
+    "audio": "./sample1.mp3",
+    "output": {
+      "violence": "YES",
+      "violence_score": 0.98,
+      "audio_metadata": {
+        "duration_s": 42.1,
+        "sample_rate_hz": 16000,
+        "channels": 1,
+        "detected_languages": [
+          {
+            "language": "en",
+            "confidence": 0.99
+          }
+        ],
+        "notes": "Audio contains multiple gunshots and shouting."
+      },
+      "sounds_detected": [
+        {
+          "label": "gunshot",
+          "start": "00:00:10.115",
+          "end": "00:00:10.550",
+          "confidence": 0.95,
+          "notes": "Loud gunshot followed by glass shattering."
+        },
+        {
+          "label": "gunshot",
+          "start": "00:00:23.230",
+          "end": "00:00:23.600",
+          "confidence": 0.92,
+          "notes": "Clear gunshot sound."
+        },
+        {
+          "label": "gunshot",
+          "start": "00:00:31.400",
+          "end": "00:00:31.750",
+          "confidence": 0.94,
+          "notes": "Clear gunshot sound."
+        },
+        {
+          "label": "gunshot",
+          "start": "00:00:35.050",
+          "end": "00:00:35.500",
+          "confidence": 0.96,
+          "notes": "Loud gunshot followed by extensive glass shattering."
+        }
+      ],
+      "speech_detected": [
+        {
+          "start": "00:00:01.200",
+          "end": "00:00:04.000",
+          "speaker": "speaker_1",
+          "language": "en",
+          "transcript": "I know you're out there, Mr. Sniper.",
+          "translation_en": "I know you're out there, Mr. Sniper.",
+          "intent": "taunt",
+          "confidence": 0.95,
+          "notes": "Male speaker taunting an unseen person."
+        },
+        {
+          "start": "00:00:13.800",
+          "end": "00:00:18.000",
+          "speaker": "speaker_1",
+          "language": "en",
+          "transcript": "Shoot me! Go on then! What are you waiting for? Just shoot me right now!",
+          "translation_en": "Shoot me! Go on then! What are you waiting for? Just shoot me right now!",
+          "intent": "provocation",
+          "confidence": 0.97,
+          "notes": "Shouted provocation, daring someone to shoot."
+        },
+        {
+          "start": "00:00:18.400",
+          "end": "00:00:19.800",
+          "speaker": "speaker_2",
+          "language": "en",
+          "transcript": "Lucifer, what are you doing?",
+          "translation_en": "Lucifer, what are you doing?",
+          "intent": "inquiry",
+          "confidence": 0.90,
+          "notes": "Female speaker expressing concern."
+        },
+        {
+          "start": "00:00:40.200",
+          "end": "00:00:41.500",
+          "speaker": "speaker_2",
+          "language": "en",
+          "transcript": "Drop your weapon! Now!",
+          "translation_en": "Drop your weapon! Now!",
+          "intent": "command",
+          "confidence": 0.96,
+          "notes": "Female speaker issuing a forceful command, likely law enforcement."
+        }
+      ],
+      "emergencies": [
+        {
+          "type": "active_shooter",
+          "start": "00:00:10.115",
+          "end": "00:00:35.500",
+          "severity": 5,
+          "rationale": "Multiple gunshots detected over an extended period, combined with aggressive shouting and law enforcement commands.",
+          "confidence": 0.98
+        }
+      ],
+      "summary": "Multiple gunshots are detected, starting at 00:00:10. A male speaker is heard taunting a shooter, repeatedly yelling 'Shoot me!'. A female speaker, likely law enforcement, shouts 'Drop your weapon!'. The audio depicts a high-risk active shooter situation.",
+      "recommendations": [
+        {
+          "time": "00:00:10.115",
+          "action": "call_police",
+          "notes": "High priority – armed assault / active shooter in progress."
+        }
+      ]
+    }
+  },
+
+  {
+    "audio": "./sample2.mp3",
+    "output": {
+      "violence": "NO",
+      "violence_score": 0.25,
+      "audio_metadata": {
+        "duration_s": 14.8,
+        "sample_rate_hz": 16000,
+        "channels": 1,
+        "detected_languages": [
+          {
+            "language": "ar",
+            "confidence": 0.98
+          }
+        ],
+        "notes": "Tense verbal altercation in Arabic with shouting."
+      },
+      "sounds_detected": [],
+      "speech_detected": [
+        {
+          "start": "00:00:00.500",
+          "end": "00:00:01.300",
+          "speaker": "speaker_1",
+          "language": "ar",
+          "transcript": "جيت امتى؟",
+          "translation_en": "When did you arrive?",
+          "intent": "inquiry",
+          "confidence": 0.95,
+          "notes": ""
+        },
+        {
+          "start": "00:00:02.100",
+          "end": "00:00:03.000",
+          "speaker": "speaker_2",
+          "language": "ar",
+          "transcript": "النهاردة الصبح",
+          "translation_en": "This morning.",
+          "intent": "statement",
+          "confidence": 0.96,
+          "notes": ""
+        },
+        {
+          "start": "00:00:03.500",
+          "end": "00:00:06.500",
+          "speaker": "speaker_1",
+          "language": "ar",
+          "transcript": "كلمتك من هناك كتير أوي ما ردتيش عليا",
+          "translation_en": "I called you many times from there, you didn't answer me.",
+          "intent": "accusation",
+          "confidence": 0.94,
+          "notes": "Tone is confrontational."
+        },
+        {
+          "start": "00:00:11.500",
+          "end": "00:00:12.800",
+          "speaker": "speaker_1",
+          "language": "ar",
+          "transcript": "ردي عليا دي دبلة؟",
+          "translation_en": "Answer me, is that a ring?",
+          "intent": "demand",
+          "confidence": 0.92,
+          "notes": "Aggressive and demanding tone."
+        },
+        {
+          "start": "00:00:13.500",
+          "end": "00:00:14.800",
+          "speaker": "speaker_1",
+          "language": "ar",
+          "transcript": "أنا بكلمك بصيلي!",
+          "translation_en": "I'm talking to you, look at me!",
+          "intent": "command",
+          "confidence": 0.97,
+          "notes": "Shouted, aggressive command."
+        }
+      ],
+      "emergencies": [],
+      "summary": "Audio captures a tense domestic dispute in Arabic. A male speaker becomes increasingly aggressive, culminating in shouting a command at a female speaker. The situation is identified as a potential verbal abuse scenario.",
+      "recommendations": []
+    }
   }
 ]
 
