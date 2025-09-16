@@ -1,6 +1,6 @@
 SafeWatch API
 
-FastAPI service for periodic surveillance analysis using Qwen vision and audio models.
+FastAPI service for periodic surveillance analysis using Qwen vision-language model (VLM) and Whisper for audio transcription.
 
 Endpoints
 - POST `/vision/infer` form-data: `image` (file), `prompt_variant` (optional)
@@ -34,6 +34,11 @@ Configure `.env` or environment variables:
 - AUTO_RUN=true
 - VIDEO_SOURCE=0 or path to video
 - AUDIO_SOURCE=path/to/audio.wav
+- WHISPER_MODEL=tiny|base|small|medium|large (default: small)
 
 Artifacts are stored under `storage/` or served via `EXTERNAL_BASE_URL` if provided.
+
+Notes
+- Audio path now uses Whisper for transcription; the VLM judges the transcript with structured outputs.
+- ffmpeg is required and assumed available in the Docker image.
 

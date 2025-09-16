@@ -15,3 +15,4 @@ aiofiles>=23.2.1
 requests>=2.32.3
 accelerate
 streamlit>=1.38.0
+openai-whisper>=20231117

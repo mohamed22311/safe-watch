@@ -6,7 +6,7 @@ from typing import Optional
 class Settings(BaseSettings):
     # Models
     qwen_vl_model: str = "Qwen/Qwen2.5-VL-3B-Instruct"
-    qwen_audio_model: str = "Qwen/Qwen2-Audio-7B-Instruct"
+    whisper_model: str = "small"  # tiny, base, small, medium, large
 
     # Sources (use absolute/relative file paths or device indices like 0 for webcam)
     video_source: Optional[str] = None  # e.g., "./trash/Sample1.mp4" or "0" for webcam

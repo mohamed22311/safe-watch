@@ -8,67 +8,110 @@ from typing import Optional, Dict, Any
 import librosa
 import numpy as np
 import torch
-from transformers import Qwen2AudioForConditionalGeneration, AutoProcessor
+import soundfile as sf
+import whisper  # openai-whisper
 
 from ..config import settings
-from ..models.schemas import AudioResult, AudioAnalysis
+from ..models.schemas import AudioResult, AudioAnalysis, AudioMetadata, DetectedLanguage
 from ..utils.storage import get_storage
-from ..prompts.audio import get_prompt, build_messages_and_paths
+from ..prompts.audio import build_messages_from_transcript
+from .vision import get_vision_model
 
 
-class AudioModel:
+class WhisperTranscriber:
     def __init__(self, model_name: str) -> None:
         self.model_name = model_name
-        # Enable remote code to use the model-specific processor that supports audio inputs
-        self.processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-        self.model = Qwen2AudioForConditionalGeneration.from_pretrained(
-            model_name,
-            device_map="auto",
-            torch_dtype="auto",
-            trust_remote_code=True,
-        )
-        self.model.eval()
+        # Device selection handled internally by whisper; torch.cuda.is_available influences speed
+        self.model = whisper.load_model(model_name)
 
-    @torch.inference_mode()
-    def generate(self, conversation: list[dict], audio: np.ndarray) -> str:
-        text = self.processor.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
-        # Pass a list for batched API consistency
-        inputs = self.processor(text=[text], audios=[audio], return_tensors="pt", padding=True)
-        # Use max_new_tokens to avoid issues when the input prompt exceeds default max_length
-        generate_ids = self.model.generate(**inputs, max_new_tokens=512)
-        generate_ids = generate_ids[:, inputs.input_ids.size(1):]
-        response = self.processor.batch_decode(
-            generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False
-        )[0]
-        return response
+    def transcribe_path(self, audio_path: str) -> Dict[str, Any]:
+        # Use high-level API that leverages ffmpeg to decode
+        result: Dict[str, Any] = self.model.transcribe(audio_path)
+        return result
 
 
-_audio_singleton: Optional[AudioModel] = None
+_whisper_singleton: Optional[WhisperTranscriber] = None
 
 
-def get_audio_model() -> AudioModel:
-    global _audio_singleton
-    if _audio_singleton is None:
-        _audio_singleton = AudioModel(settings.qwen_audio_model)
-    return _audio_singleton
+def get_transcriber() -> WhisperTranscriber:
+    global _whisper_singleton
+    if _whisper_singleton is None:
+        _whisper_singleton = WhisperTranscriber(settings.whisper_model)
+    return _whisper_singleton
 
 
 class AudioService:
     async def analyze_audio_bytes(self, audio_bytes: bytes, prompt_variant: str = "default") -> AudioResult:
-        # Load bytes into numpy at required sampling rate
+        # Persist to temp file for whisper and metadata tools
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as tmp:
             tmp.write(audio_bytes)
             tmp.flush()
-            y, sr = librosa.load(tmp.name, sr=get_audio_model().processor.feature_extractor.sampling_rate)
-        model = get_audio_model()
-        conversation, _ = build_messages_and_paths(prompt_variant)
-        # Append the actual audio message placeholder expected by the template
-        conversation.append({"role": "user", "content": [{"type": "audio", "audio_url": "local.wav"}]})
-        text = model.generate(conversation=conversation, audio=y)
+            # Metadata via soundfile
+            try:
+                info = sf.info(tmp.name)
+                duration_s = float(info.duration) if hasattr(info, "duration") and info.duration else (info.frames / info.samplerate if info.samplerate else 0.0)
+                sample_rate_hz = int(info.samplerate) if info.samplerate else None
+                channels = int(info.channels) if info.channels else None
+            except Exception:
+                # Fallback via librosa
+                try:
+                    y, sr = librosa.load(tmp.name, sr=None, mono=False)
+                    duration_s = float(len(y) / sr) if isinstance(y, np.ndarray) and y.size > 0 and sr else 0.0
+                    sample_rate_hz = int(sr) if sr else None
+                    channels = int(1 if y.ndim == 1 else y.shape[0]) if isinstance(y, np.ndarray) else None
+                except Exception:
+                    duration_s = 0.0
+                    sample_rate_hz = None
+                    channels = None
+
+            transcriber = get_transcriber()
+            wres = transcriber.transcribe_path(tmp.name)
+            transcript_text: str = wres.get("text", "").strip()
+            language: Optional[str] = wres.get("language")
+
+        detected_languages: list[DetectedLanguage] = []
+        if language:
+            try:
+                detected_languages.append(DetectedLanguage(language=language, confidence=1.0))
+            except Exception:
+                pass
+
+        metadata = AudioMetadata(
+            duration_s=duration_s,
+            sample_rate_hz=sample_rate_hz,
+            channels=channels,
+            detected_languages=detected_languages,
+            notes=None,
+        )
+
+        # Build VLM messages from transcript and metadata
+        messages = build_messages_from_transcript(
+            transcript=transcript_text or "",
+            variant=prompt_variant,
+            metadata={
+                "duration_s": metadata.duration_s,
+                "sample_rate_hz": metadata.sample_rate_hz,
+                "channels": metadata.channels,
+                "language": language,
+            },
+        )
+
+        vlm = get_vision_model()
+        vlm_text = vlm.generate(messages=messages, max_new_tokens=512)
+
         # Split JSON and summary best-effort
-        json_part, summary_part = _split_json_and_summary(text)
-        analysis = AudioAnalysis.model_validate(json_part) if isinstance(json_part, dict) and json_part else AudioAnalysis.model_validate({"audio_metadata": {"duration_s": 0.0}})
-        return AudioResult(analysis=analysis, post_json_summary=summary_part, raw_text=text)
+        json_part, summary_part = _split_json_and_summary(vlm_text)
+        # If JSON lacks audio_metadata, inject ours
+        if isinstance(json_part, dict) and "audio_metadata" not in json_part:
+            json_part["audio_metadata"] = {
+                "duration_s": metadata.duration_s,
+                "sample_rate_hz": metadata.sample_rate_hz,
+                "channels": metadata.channels,
+                "detected_languages": [dl.model_dump() for dl in metadata.detected_languages],
+                "notes": metadata.notes,
+            }
+        analysis = AudioAnalysis.model_validate(json_part) if isinstance(json_part, dict) and json_part else AudioAnalysis.model_validate({"audio_metadata": metadata.model_dump()})
+        return AudioResult(analysis=analysis, post_json_summary=summary_part, raw_text=vlm_text)
 
 
 def _split_json_and_summary(text: str) -> tuple[Dict[str, Any], Optional[str]]:
@@ -145,9 +188,8 @@ class AudioSampler:
 def _audio_indicates_incident(result: AudioResult) -> bool:
     # Minimal heuristic: severity >= 4 if present
     try:
-        emergencies = result.json.get("emergencies", [])
-        for item in emergencies:
-            if float(item.get("severity", 0)) >= 4:
+        for item in result.analysis.emergencies:
+            if float(item.severity) >= 4:
                 return True
     except Exception:
         pass
